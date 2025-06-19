@@ -39,11 +39,12 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 import openml
 from openml.exceptions import PyOpenMLError
-from openml.extensions.sklearn import SklearnExtension, cat, cont
 from openml.flows import OpenMLFlow
 from openml.flows.functions import assert_flows_equal
 from openml.runs.trace import OpenMLRunTrace
-from openml.testing import CustomImputer, SimpleImputer, TestBase
+
+from tests.base import TestBase, SimpleImputer, CustomImputer
+from openml_sklearn import SklearnExtension, cat, cont
 
 this_directory = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(this_directory)
@@ -103,7 +104,7 @@ class TestSklearnExtensionFlowFunctions(TestBase):
     # than 1 seconds
 
     def setUp(self):
-        super().setUp(n_levels=2)
+        super().setUp()
         iris = sklearn.datasets.load_iris()
         self.X = iris.data
         self.y = iris.target
@@ -1288,10 +1289,22 @@ class TestSklearnExtensionFlowFunctions(TestBase):
         this_directory = os.path.dirname(os.path.abspath(__file__))
         tests_directory = os.path.abspath(os.path.join(this_directory, "..", ".."))
         sys.path.append(tests_directory)
-        import tests.test_flows.dummy_learn.dummy_forest
+
+        class DummyRegressor:
+            def fit(self, X, y):
+                return self
+
+            def predict(self, X):
+                return X[:, 0]
+
+            def get_params(self, deep=False):
+                return {}
+
+            def set_params(self, params):
+                return self
 
         pca = sklearn.decomposition.PCA()
-        dummy = tests.test_flows.dummy_learn.dummy_forest.DummyRegressor()
+        dummy = DummyRegressor()
         pipeline = sklearn.pipeline.Pipeline((("pca", pca), ("dummy", dummy)))
         flow = self.extension.model_to_flow(pipeline)
         # In python2.7, the unit tests work differently on travis-ci; therefore,
@@ -1693,7 +1706,7 @@ class TestSklearnExtensionRunFunctions(TestBase):
     _multiprocess_can_split_ = True
 
     def setUp(self):
-        super().setUp(n_levels=2)
+        super().setUp()
         self.extension = SklearnExtension()
 
     ################################################################################################
